@@ -15,9 +15,9 @@ export function Container({ children, flex, padding = 'none' }: ContainerProps) 
 }
 
 const styles = StyleSheet.create({
-  base: {},
+  base: { width: '100%' },
   none: {},
-  sm: {},
-  md: {},
-  lg: {},
+  sm: { padding: 8 },
+  md: { padding: 16 },
+  lg: { padding: 24 },
 });

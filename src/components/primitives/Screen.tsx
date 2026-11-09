@@ -23,11 +23,11 @@ export function Screen({ children, padding = 'md', scrollable = true }: ScreenPr
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  container: { flex: 1 },
-  content: { flexGrow: 1 },
+  scroll: { flex: 1, backgroundColor: '#F6F8F6' },
+  container: { flex: 1, backgroundColor: '#F6F8F6' },
+  content: { flexGrow: 1, width: '100%', maxWidth: 760, alignSelf: 'center' },
   none: {},
-  sm: {},
-  md: {},
-  lg: {},
+  sm: { padding: 8 },
+  md: { padding: 16 },
+  lg: { padding: 24 },
 });

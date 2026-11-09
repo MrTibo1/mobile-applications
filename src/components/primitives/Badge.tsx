@@ -7,9 +7,16 @@ interface BadgeProps {
 }
 
 export function Badge({ label, variant = 'default' }: BadgeProps) {
+  const textColor = {
+    default: '#52645D',
+    success: '#176B5B',
+    warning: '#8A4B08',
+    error: '#B42318',
+  }[variant];
+
   return (
     <View style={[styles.base, styles[variant]]}>
-      <Text size="sm">{label}</Text>
+      <Text size="sm" weight="medium" color={textColor}>{label}</Text>
     </View>
   );
 }
@@ -22,15 +29,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   default: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#E9EFEB',
   },
   success: {
-    backgroundColor: '#d1fae5',
+    backgroundColor: '#E6F0EB',
   },
   warning: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: '#FFF2CC',
   },
   error: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#FEF3F2',
   },
 });

@@ -35,11 +35,11 @@ export function Stack({
 const styles = StyleSheet.create({
   base: { flexDirection: 'column' },
   gap_none: {},
-  gap_sm: {},
-  gap_md: {},
-  gap_lg: {},
+  gap_sm: { gap: 4 },
+  gap_md: { gap: 8 },
+  gap_lg: { gap: 16 },
   padding_none: {},
-  padding_sm: {},
-  padding_md: {},
-  padding_lg: {},
+  padding_sm: { padding: 8 },
+  padding_md: { padding: 16 },
+  padding_lg: { padding: 24 },
 });

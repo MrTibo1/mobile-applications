@@ -6,9 +6,9 @@ interface SpinnerProps {
 }
 
 export function Spinner({ size = 'small', color }: SpinnerProps) {
-  return <ActivityIndicator size={size} color={color} style={styles.base} />;
+  return <ActivityIndicator size={size} color={color ?? '#176B5B'} style={styles.base} />;
 }
 
 const styles = StyleSheet.create({
-  base: {},
+  base: { alignSelf: 'center' },
 });

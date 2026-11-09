@@ -20,8 +20,8 @@ export function Radio({ label, value, selected, onSelect }: RadioProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'center' },
-  circle: { borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  circleSelected: {},
-  dot: { borderRadius: 999 },
+  container: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  circle: { width: 20, height: 20, borderWidth: 1.5, borderColor: '#A4B1AA', borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  circleSelected: { borderColor: '#176B5B' },
+  dot: { width: 10, height: 10, borderRadius: 999, backgroundColor: '#176B5B' },
 });

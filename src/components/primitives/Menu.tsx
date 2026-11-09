@@ -37,7 +37,7 @@ export function Menu({ items, visible, onClose }: MenuProps) {
 }
 
 const styles = StyleSheet.create({
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  menu: { position: 'absolute' },
-  menuItem: {},
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
+  menu: { position: 'absolute', top: 0, right: 0, zIndex: 2, minWidth: 200, paddingVertical: 4, borderRadius: 10, backgroundColor: '#FFFFFF', elevation: 4, shadowColor: '#182722', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+  menuItem: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14 },
 });

@@ -10,13 +10,17 @@ interface NavItemProps {
 
 export function NavItem({ label, onPress, active = false }: NavItemProps) {
   return (
-    <Pressable onPress={onPress} style={[styles.base, active && styles.active]}>
-      <Text size="md" weight={active ? 'bold' : 'normal'}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.base, active && styles.active, pressed && styles.pressed]}
+    >
+      <Text size="md" weight={active ? 'bold' : 'medium'} color={active ? '#176B5B' : '#52645D'}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {},
-  active: {},
+  base: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  active: { borderBottomColor: '#176B5B' },
+  pressed: { opacity: 0.72 },
 });

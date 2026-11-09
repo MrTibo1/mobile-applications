@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   base: { flexDirection: 'row' },
   wrap: { flexWrap: 'wrap' },
   gap_none: {},
-  gap_sm: {},
-  gap_md: {},
-  gap_lg: {},
+  gap_sm: { gap: 4 },
+  gap_md: { gap: 8 },
+  gap_lg: { gap: 16 },
 });

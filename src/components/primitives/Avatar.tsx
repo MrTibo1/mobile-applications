@@ -18,15 +18,15 @@ export function Avatar({ uri, name, size = 'md' }: AvatarProps) {
 
   return (
     <View style={[styles.base, styles[size], styles.fallback]}>
-      <Text size="sm">{initials}</Text>
+      <Text size="sm" weight="bold" color="#176B5B">{initials}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   base: { borderRadius: 999, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  fallback: {},
-  sm: {},
-  md: {},
-  lg: {},
+  fallback: { backgroundColor: '#E6F0EB' },
+  sm: { width: 32, height: 32 },
+  md: { width: 42, height: 42 },
+  lg: { width: 56, height: 56 },
 });

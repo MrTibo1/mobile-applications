@@ -18,6 +18,6 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
 }
 
 const styles = StyleSheet.create({
-  base: { alignItems: 'center', justifyContent: 'center' },
-  action: {},
+  base: { alignItems: 'center', justifyContent: 'center', paddingVertical: 28, paddingHorizontal: 20, gap: 8 },
+  action: { marginTop: 8 },
 });

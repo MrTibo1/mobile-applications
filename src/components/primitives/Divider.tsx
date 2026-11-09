@@ -18,11 +18,11 @@ export function Divider({ orientation = 'horizontal', spacing = 'none' }: Divide
 }
 
 const styles = StyleSheet.create({
-  base: {},
-  horizontal: { height: 1, width: '100%' },
-  vertical: { width: 1, height: '100%' },
+  base: { backgroundColor: '#DDE4E0' },
+  horizontal: { height: StyleSheet.hairlineWidth, width: '100%' },
+  vertical: { width: StyleSheet.hairlineWidth, height: '100%' },
   spacing_none: {},
-  spacing_sm: {},
-  spacing_md: {},
-  spacing_lg: {},
+  spacing_sm: { marginVertical: 4, marginHorizontal: 4 },
+  spacing_md: { marginVertical: 8, marginHorizontal: 8 },
+  spacing_lg: { marginVertical: 16, marginHorizontal: 16 },
 });

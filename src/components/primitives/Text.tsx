@@ -1,6 +1,7 @@
-import { Text as RNText, StyleSheet } from 'react-native';
+import { Text as RNText, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 
 interface TextProps {
+  style?: StyleProp<TextStyle>;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   weight?: 'normal' | 'medium' | 'bold';
@@ -16,6 +17,7 @@ export function Text({
   color,
   align = 'left',
   numberOfLines,
+  style,
 }: TextProps) {
   return (
     <RNText
@@ -25,6 +27,7 @@ export function Text({
         styles[weight],
         { textAlign: align },
         color !== undefined && { color },
+        style,
       ]}
       numberOfLines={numberOfLines}
     >
@@ -35,12 +38,12 @@ export function Text({
 
 const styles = StyleSheet.create({
   base: {
-    color: '#111827',
+    color: '#182722',
   },
-  sm: { fontSize: 12, lineHeight: 16 },
-  md: { fontSize: 14, lineHeight: 20 },
-  lg: { fontSize: 16, lineHeight: 24 },
-  xl: { fontSize: 20, lineHeight: 28 },
+  sm: { fontSize: 13, lineHeight: 18 },
+  md: { fontSize: 15, lineHeight: 22 },
+  lg: { fontSize: 17, lineHeight: 24 },
+  xl: { fontSize: 24, lineHeight: 32 },
   normal: { fontWeight: '400' },
   medium: { fontWeight: '500' },
   bold: { fontWeight: '700' },
