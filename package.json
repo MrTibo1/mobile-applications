@@ -9,7 +9,9 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "cypress:open": "cypress open",
-    "cypress:run": "cypress run"
+    "cypress:run": "cypress run",
+    "deploy": "gh-pages --nojekyll -d dist",
+    "predeploy": "expo export -p web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.15",
@@ -38,6 +40,7 @@
     "@storybook/react-vite": "^10.5.10",
     "@types/react": "~19.3.0",
     "cypress": "^16.2.0",
+    "gh-pages": "^6.3.0",
     "storybook": "^10.5.10",
     "typescript": "~6.0.3",
     "vite": "^8.3.5"
