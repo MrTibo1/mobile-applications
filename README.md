@@ -1,5 +1,9 @@
 ## House manager app
 https://mobile-applications-zeta.vercel.app
+
+|demo@example.net|demodemo|
+|----------------|--------|
+
 ### Target
 Everyone who wants a simple app to keep track of common household things like chores, shopping, kitchen and storage stock and payments (who owes money)
 
