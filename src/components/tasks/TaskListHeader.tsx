@@ -5,12 +5,14 @@ import { Text } from '../primitives/Text';
 interface TaskListHeaderProps {
   completedTaskCount: number;
   isDeletingCompleted: boolean;
+  disabled?: boolean;
   onDeleteCompleted: () => void;
 }
 
 export function TaskListHeader({
   completedTaskCount,
   isDeletingCompleted,
+  disabled = false,
   onDeleteCompleted,
 }: TaskListHeaderProps) {
   return (
@@ -20,6 +22,7 @@ export function TaskListHeader({
         <DeleteCompletedTasksButton
           completedTaskCount={completedTaskCount}
           isDeleting={isDeletingCompleted}
+          disabled={disabled}
           onDelete={onDeleteCompleted}
         />
       </View>

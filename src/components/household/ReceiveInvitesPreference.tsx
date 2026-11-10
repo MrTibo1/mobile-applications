@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Switch, StyleSheet, View } from 'react-native';
 import { getReceiveInvitesPreference, setReceiveInvitesPreference } from '../../services/householdService';
+import { reportNetworkFailure, useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { Text } from '../primitives/Text';
 
 export function ReceiveInvitesPreference() {
+  const isOnline = useNetworkStatus();
   const [enabled, setEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,6 +17,7 @@ export function ReceiveInvitesPreference() {
         if (active) setEnabled(preference);
       })
       .catch((loadError: unknown) => {
+        reportNetworkFailure(loadError);
         if (active) setError(loadError instanceof Error ? loadError.message : 'Unable to load invite preferences.');
       })
       .finally(() => {
@@ -25,12 +28,14 @@ export function ReceiveInvitesPreference() {
   }, []);
 
   const handleChange = async (value: boolean) => {
+    if (!isOnline) return;
     const previousValue = enabled;
     setEnabled(value);
     setError('');
     try {
       await setReceiveInvitesPreference(value);
     } catch (saveError) {
+      reportNetworkFailure(saveError);
       setEnabled(previousValue);
       setError(saveError instanceof Error ? saveError.message : 'Unable to update invite preferences.');
     }
@@ -46,7 +51,7 @@ export function ReceiveInvitesPreference() {
         <Switch
           value={enabled}
           onValueChange={handleChange}
-          disabled={isLoading}
+          disabled={isLoading || !isOnline}
           accessibilityLabel="Receive household invitations"
           trackColor={{ false: '#CBD2D9', true: '#8FC5B9' }}
           thumbColor={enabled ? '#176B5B' : '#F4F4F5'}

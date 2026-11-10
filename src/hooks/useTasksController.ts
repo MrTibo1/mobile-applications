@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, type Href } from 'expo-router';
-import { getHouseholdForUser, type Household } from '../services/householdService';
 import {
   createTask,
   deleteCompletedTasks,
@@ -11,7 +10,9 @@ import {
   updateTaskMessage,
   type HouseholdTask,
 } from '../services/taskService';
+import { getOfflineSnapshot, saveOfflineSnapshot } from '../services/offlineCache';
 import { useHouseholdShell } from '../state/HouseholdShellContext';
+import { reportNetworkFailure, useNetworkStatus } from './useNetworkStatus';
 import type { User } from '../types/User';
 
 function sortTasks(tasks: HouseholdTask[]): HouseholdTask[] {
@@ -29,8 +30,8 @@ function sortTasks(tasks: HouseholdTask[]): HouseholdTask[] {
 }
 
 export function useTasksController(user: User | null) {
-  const { setHousehold: setShellHousehold } = useHouseholdShell();
-  const [household, setHousehold] = useState<Household | null>(null);
+  const { household, isLoading: isHouseholdLoading } = useHouseholdShell();
+  const isOnline = useNetworkStatus();
   const [tasks, setTasks] = useState<HouseholdTask[]>([]);
   const [deadline, setDeadline] = useState('');
   const [isDraftActive, setIsDraftActive] = useState(false);
@@ -43,30 +44,52 @@ export function useTasksController(user: User | null) {
   const draftMessage = useRef('');
   const draftDeadline = useRef('');
   const taskSaveInProgress = useRef(false);
+  const cacheKey = user ? `tasks:${user.id}` : '';
 
   const loadTasks = useCallback(async (householdId: number) => {
     setTasks(await getTasks(householdId));
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || isHouseholdLoading) return;
     let active = true;
 
     const load = async () => {
-      try {
-        const currentHousehold = await getHouseholdForUser(user.id);
-        if (!active) return;
-        if (!currentHousehold) {
-          setShellHousehold(null);
+      if (!household) {
+        if (isOnline) {
           router.replace('/(app)/household' as Href);
-          return;
+        } else {
+          setError('No saved household is available while offline.');
         }
-        setHousehold(currentHousehold);
-        setShellHousehold(currentHousehold);
-        const result = await getTasks(currentHousehold.id);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!isOnline) {
+        const snapshot = await getOfflineSnapshot<{ tasks: HouseholdTask[] }>(cacheKey);
+        if (active && snapshot) {
+          setError('');
+          setTasks(snapshot.tasks);
+        } else if (active) {
+          setError('No saved tasks are available. Connect to the internet to load tasks.');
+        }
+        if (active) setIsLoading(false);
+        return;
+      }
+
+      setError('');
+      try {
+        const result = await getTasks(household.id);
         if (active) setTasks(result);
       } catch (loadError) {
-        if (active) setError(loadError instanceof Error ? loadError.message : 'Unable to load tasks.');
+        reportNetworkFailure(loadError);
+        const snapshot = await getOfflineSnapshot<{ tasks: HouseholdTask[] }>(cacheKey);
+        if (active && snapshot) {
+          setTasks(snapshot.tasks);
+          setError('Unable to refresh tasks. Showing the saved copy.');
+        } else if (active) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load tasks.');
+        }
       } finally {
         if (active) setIsLoading(false);
       }
@@ -74,9 +97,19 @@ export function useTasksController(user: User | null) {
 
     void load();
     return () => { active = false; };
-  }, [setShellHousehold, user]);
+  }, [cacheKey, household, isHouseholdLoading, isOnline, user]);
+
+  useEffect(() => {
+    if (!isLoading && household && user) {
+      void saveOfflineSnapshot(cacheKey, { household, tasks });
+    }
+  }, [cacheKey, household, isLoading, tasks, user]);
 
   const persistTask = async (message: string, dueDate: string): Promise<boolean> => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return false;
+    }
     if (!household || !user || !message.trim() || taskSaveInProgress.current) return false;
     taskSaveInProgress.current = true;
     setError('');
@@ -86,6 +119,7 @@ export function useTasksController(user: User | null) {
       try {
         await loadTasks(household.id);
       } catch (loadError) {
+        reportNetworkFailure(loadError);
         setError(
           loadError instanceof Error
             ? `The task was added, but the list could not be refreshed: ${loadError.message}`
@@ -94,6 +128,7 @@ export function useTasksController(user: User | null) {
       }
       return true;
     } catch (saveError) {
+      reportNetworkFailure(saveError);
       setError(saveError instanceof Error ? saveError.message : 'Unable to add task.');
       return false;
     } finally {
@@ -149,6 +184,10 @@ export function useTasksController(user: User | null) {
   };
 
   const handleEditTask = async (task: HouseholdTask, message: string): Promise<boolean> => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return false;
+    }
     if (!household || !user || !message.trim()) return false;
     setError('');
     try {
@@ -160,6 +199,7 @@ export function useTasksController(user: User | null) {
       try {
         await loadTasks(household.id);
       } catch (loadError) {
+        reportNetworkFailure(loadError);
         setError(
           loadError instanceof Error
             ? `The task was updated, but the list could not be refreshed: ${loadError.message}`
@@ -168,12 +208,17 @@ export function useTasksController(user: User | null) {
       }
       return true;
     } catch (updateError) {
+      reportNetworkFailure(updateError);
       setError(updateError instanceof Error ? updateError.message : 'Unable to update task.');
       return false;
     }
   };
 
   const handleToggleTask = async (task: HouseholdTask) => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return;
+    }
     if (!household || !user || pendingTaskIds.has(task.id)) return;
 
     const isCompleted = !task.isCompleted;
@@ -188,6 +233,7 @@ export function useTasksController(user: User | null) {
       await setTaskCompleted(household.id, task.id, user.id, isCompleted);
       await loadTasks(household.id);
     } catch (updateError) {
+      reportNetworkFailure(updateError);
       setTasks((current) => sortTasks(current.map((item) => item.id === task.id ? task : item)));
       setError(updateError instanceof Error ? updateError.message : 'Unable to update task.');
     } finally {
@@ -200,6 +246,10 @@ export function useTasksController(user: User | null) {
   };
 
   const handleUpdateTaskDeadline = async (task: HouseholdTask, deadlineValue: string) => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return;
+    }
     if (!household || !user || pendingTaskIds.has(task.id)) return;
 
     let timestamp: string | null;
@@ -228,6 +278,7 @@ export function useTasksController(user: User | null) {
       try {
         await loadTasks(household.id);
       } catch (loadError) {
+        reportNetworkFailure(loadError);
         setError(
           loadError instanceof Error
             ? `The due date was updated, but the list could not be refreshed: ${loadError.message}`
@@ -235,6 +286,7 @@ export function useTasksController(user: User | null) {
         );
       }
     } catch (updateError) {
+      reportNetworkFailure(updateError);
       setTasks((current) => sortTasks(current.map((item) => item.id === task.id ? task : item)));
       setError(updateError instanceof Error ? updateError.message : 'Unable to update due date.');
     } finally {
@@ -247,6 +299,10 @@ export function useTasksController(user: User | null) {
   };
 
   const handleDeleteCompletedTasks = async () => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return;
+    }
     if (!household || isDeletingCompleted) return;
     setError('');
     setIsDeletingCompleted(true);
@@ -256,6 +312,7 @@ export function useTasksController(user: User | null) {
       try {
         await loadTasks(household.id);
       } catch (loadError) {
+        reportNetworkFailure(loadError);
         setError(
           loadError instanceof Error
             ? `Completed tasks were deleted, but the list could not be refreshed: ${loadError.message}`
@@ -263,6 +320,7 @@ export function useTasksController(user: User | null) {
         );
       }
     } catch (deleteError) {
+      reportNetworkFailure(deleteError);
       setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete completed tasks.');
     } finally {
       setIsDeletingCompleted(false);

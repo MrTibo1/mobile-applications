@@ -9,10 +9,12 @@ import { ShoppingListBackButton } from '../../../src/components/shopping/Shoppin
 import { ShoppingListItemRow } from '../../../src/components/shopping/ShoppingListItemRow';
 import { Text } from '../../../src/components/primitives/Text';
 import { useShoppingListController } from '../../../src/hooks/useShoppingListController';
+import { useNetworkStatus } from '../../../src/hooks/useNetworkStatus';
 import { useAuthStore } from '../../../src/state/useAuthStore';
 
 export default function ShoppingListDetailScreen() {
   const user = useAuthStore((state) => state.user);
+  const isOnline = useNetworkStatus();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     household,
@@ -57,7 +59,7 @@ export default function ShoppingListDetailScreen() {
           <ShoppingListItemRow
             key={item.id}
             item={item}
-            disabled={pendingItemIds.has(item.id)}
+            disabled={!isOnline || pendingItemIds.has(item.id)}
             onToggle={() => { void handleToggleItem(item); }}
             onEdit={(name) => handleEditItem(item, name)}
           />
@@ -71,11 +73,12 @@ export default function ShoppingListDetailScreen() {
             autoCapitalize="sentences"
             onDraftChange={updateDraftItemName}
             onCommit={handleCommitNewItem}
+            disabled={!isOnline}
           />
         ) : null}
         <AddNewListEntryButton
           accessibilityLabel="Add new shopping item"
-          disabled={isSaving}
+          disabled={!isOnline || isSaving}
           onPress={() => { void handleAddNewItem(); }}
         />
       </ListGroup>

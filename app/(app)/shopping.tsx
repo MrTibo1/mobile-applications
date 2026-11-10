@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { FeedbackMessage } from '../../src/components/common/FeedbackMessage';
 import { ListGroup } from '../../src/components/shopping/ListGroup';
@@ -8,53 +8,71 @@ import { ShoppingEntryDialog } from '../../src/components/shopping/ShoppingEntry
 import { ShoppingListCard } from '../../src/components/shopping/ShoppingListCard';
 import { ShoppingSectionHeader } from '../../src/components/shopping/ShoppingSectionHeader';
 import { Text } from '../../src/components/primitives/Text';
-import { getHouseholdForUser, type Household } from '../../src/services/householdService';
 import {
   createShoppingList,
   getShoppingLists,
   type ShoppingListSummary,
 } from '../../src/services/shoppingService';
+import { getOfflineSnapshot, saveOfflineSnapshot } from '../../src/services/offlineCache';
+import { reportNetworkFailure, useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 import { useAuthStore } from '../../src/state/useAuthStore';
 import { useHouseholdShell } from '../../src/state/HouseholdShellContext';
 
 export default function ShoppingListsScreen() {
   const user = useAuthStore((state) => state.user);
-  const { setHousehold: setShellHousehold } = useHouseholdShell();
-  const [household, setHousehold] = useState<Household | null>(null);
+  const isOnline = useNetworkStatus();
+  const { household, isLoading: isHouseholdLoading } = useHouseholdShell();
   const [lists, setLists] = useState<ShoppingListSummary[]>([]);
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogVisible, setIsDialogVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const cacheKey = user ? `shopping-lists:${user.id}` : '';
 
   const reloadLists = useCallback(async (householdId: number) => {
     setLists(await getShoppingLists(householdId));
   }, []);
 
   useFocusEffect(useCallback(() => {
-    if (!user) return undefined;
+    if (!user || isHouseholdLoading) return undefined;
     let active = true;
 
     const load = async () => {
       setError('');
-      try {
-        const currentHousehold = await getHouseholdForUser(user.id);
-        if (!active) return;
-        if (!currentHousehold) {
-          setShellHousehold(null);
+      if (!household) {
+        if (isOnline) {
           router.replace('/(app)/household' as Href);
-          return;
+        } else {
+          setError('No saved household is available while offline.');
         }
-        setShellHousehold(currentHousehold);
-        const householdLists = await getShoppingLists(currentHousehold.id);
-        if (active) {
-          setHousehold(currentHousehold);
-          setShellHousehold(currentHousehold);
-          setLists(householdLists);
+        if (active) setIsLoading(false);
+        return;
+      }
+
+      if (!isOnline) {
+        const snapshot = await getOfflineSnapshot<{ lists: ShoppingListSummary[] }>(cacheKey);
+        if (active && snapshot) {
+          setLists(snapshot.lists);
+        } else if (active) {
+          setError('No saved shopping lists are available. Connect to the internet to load them.');
         }
+        if (active) setIsLoading(false);
+        return;
+      }
+
+      try {
+        const householdLists = await getShoppingLists(household.id);
+        if (active) setLists(householdLists);
       } catch (loadError) {
-        if (active) setError(loadError instanceof Error ? loadError.message : 'Unable to load shopping lists.');
+        reportNetworkFailure(loadError);
+        const snapshot = await getOfflineSnapshot<{ lists: ShoppingListSummary[] }>(cacheKey);
+        if (active && snapshot) {
+          setLists(snapshot.lists);
+          setError('Unable to refresh shopping lists. Showing the saved copy.');
+        } else if (active) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load shopping lists.');
+        }
       } finally {
         if (active) setIsLoading(false);
       }
@@ -62,9 +80,19 @@ export default function ShoppingListsScreen() {
 
     void load();
     return () => { active = false; };
-  }, [setShellHousehold, user]));
+  }, [cacheKey, household, isHouseholdLoading, isOnline, user]));
+
+  useEffect(() => {
+    if (!isLoading && household && user) {
+      void saveOfflineSnapshot(cacheKey, { lists });
+    }
+  }, [cacheKey, household, isLoading, lists, user]);
 
   const handleCreateList = async () => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return;
+    }
     if (!household || !user) return;
     setError('');
     setIsSaving(true);
@@ -75,6 +103,7 @@ export default function ShoppingListsScreen() {
       try {
         await reloadLists(household.id);
       } catch (loadError) {
+        reportNetworkFailure(loadError);
         setError(
           loadError instanceof Error
             ? `The list was created, but the overview could not be refreshed: ${loadError.message}`
@@ -82,6 +111,7 @@ export default function ShoppingListsScreen() {
         );
       }
     } catch (createError) {
+      reportNetworkFailure(createError);
       setError(createError instanceof Error ? createError.message : 'Unable to create shopping list.');
     } finally {
       setIsSaving(false);
@@ -89,6 +119,7 @@ export default function ShoppingListsScreen() {
   };
 
   const openDialog = () => {
+    if (!isOnline) return;
     setError('');
     setTitle('');
     setIsDialogVisible(true);
@@ -118,6 +149,7 @@ export default function ShoppingListsScreen() {
       <ShoppingSectionHeader
         title="Your lists"
         addAccessibilityLabel="Create shopping list"
+        disabled={!isOnline}
         onAdd={openDialog}
       />
       <ListGroup>
@@ -140,6 +172,7 @@ export default function ShoppingListsScreen() {
         value={title}
         error={error}
         isSaving={isSaving}
+        disabled={!isOnline}
         onClose={closeDialog}
         onValueChange={(value) => {
           setTitle(value);

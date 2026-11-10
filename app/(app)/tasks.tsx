@@ -10,10 +10,12 @@ import { TaskDueSoonSummary } from '../../src/components/tasks/TaskDueSoonSummar
 import { TaskListHeader } from '../../src/components/tasks/TaskListHeader';
 import { Text } from '../../src/components/primitives/Text';
 import { useTasksController } from '../../src/hooks/useTasksController';
+import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 import { useAuthStore } from '../../src/state/useAuthStore';
 
 export default function TasksScreen() {
   const user = useAuthStore((state) => state.user);
+  const isOnline = useNetworkStatus();
   const {
     household,
     tasks,
@@ -53,6 +55,7 @@ export default function TasksScreen() {
       <TaskListHeader
         completedTaskCount={tasks.filter((task) => task.isCompleted).length}
         isDeletingCompleted={isDeletingCompleted}
+        disabled={!isOnline}
         onDeleteCompleted={() => { void handleDeleteCompletedTasks(); }}
       />
       <ListGroup>
@@ -62,7 +65,7 @@ export default function TasksScreen() {
           <HouseholdTaskCard
             key={task.id}
             task={task}
-            disabled={isDeletingCompleted || pendingTaskIds.has(task.id)}
+            disabled={!isOnline || isDeletingCompleted || pendingTaskIds.has(task.id)}
             onToggle={() => { void handleToggleTask(task); }}
             onEdit={(message) => handleEditTask(task, message)}
             onDeadlineChange={(value) => { void handleUpdateTaskDeadline(task, value); }}
@@ -75,6 +78,7 @@ export default function TasksScreen() {
             placeholder="New task"
             onDraftChange={updateDraftMessage}
             onCommit={handleCommitNewTask}
+            disabled={!isOnline}
             trailingAccessory={(focusInput) => (
               <DatePickerField
                 label="Optional due date"
@@ -88,7 +92,7 @@ export default function TasksScreen() {
         ) : null}
         <AddNewListEntryButton
           accessibilityLabel="Add new task"
-          disabled={isSaving || isDeletingCompleted}
+          disabled={!isOnline || isSaving || isDeletingCompleted}
           onPress={() => { void handleAddNewTask(); }}
         />
       </ListGroup>
