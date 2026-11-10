@@ -14,6 +14,7 @@ interface ShoppingEntryDialogProps {
   value: string;
   error: string;
   isSaving: boolean;
+  disabled?: boolean;
   onClose: () => void;
   onValueChange: (value: string) => void;
   onSubmit: () => void;
@@ -28,6 +29,7 @@ export function ShoppingEntryDialog({
   value,
   error,
   isSaving,
+  disabled = false,
   onClose,
   onValueChange,
   onSubmit,
@@ -50,9 +52,10 @@ export function ShoppingEntryDialog({
             maxLength={160}
             returnKeyType="done"
             autoCapitalize="sentences"
+            editable={!disabled}
           />
           <FeedbackMessage message={error} />
-          <StyledButton label={submitLabel} onPress={onSubmit} isLoading={isSaving} />
+          <StyledButton label={submitLabel} onPress={onSubmit} isLoading={isSaving} disabled={disabled} />
         </Pressable>
       </Pressable>
     </Modal>

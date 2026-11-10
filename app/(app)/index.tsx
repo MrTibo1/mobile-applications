@@ -16,6 +16,7 @@ export default function HouseholdOverviewScreen() {
   const user = useAuthStore((state) => state.user);
   const {
     household,
+    isOnline,
     members,
     invites,
     isLoading,
@@ -55,6 +56,7 @@ export default function HouseholdOverviewScreen() {
       <HouseholdInvitationList
         invites={invites}
         workingInviteId={workingInviteId}
+        disabled={!isOnline}
         onRespond={(invite, accept) => { void handleInviteResponse(invite, accept); }}
       />
       {household ? (
@@ -72,12 +74,13 @@ export default function HouseholdOverviewScreen() {
               label="Email address"
               value={inviteEmail}
               onChangeText={setInviteEmail}
+              editable={isOnline}
               placeholder="name@example.com"
               keyboardType="email-address"
               autoComplete="email"
               autoCorrect={false}
             />
-            <StyledButton label="Send invitation" onPress={handleInvite} isLoading={isSubmitting} />
+            <StyledButton label="Send invitation" onPress={handleInvite} isLoading={isSubmitting} disabled={!isOnline} />
           </Card>
           <HouseholdMembers members={members} currentUserId={user.id} />
           <Card>
@@ -88,6 +91,7 @@ export default function HouseholdOverviewScreen() {
               onPress={() => { void finishLeavingHousehold(false); }}
               variant="secondary"
               isLoading={isSubmitting}
+              disabled={!isOnline}
             />
             {showLastMemberWarning ? (
               <Card>
@@ -106,6 +110,7 @@ export default function HouseholdOverviewScreen() {
                   label="Leave & delete"
                   onPress={() => { void finishLeavingHousehold(true); }}
                   isLoading={isSubmitting}
+                  disabled={!isOnline}
                 />
               </Card>
             ) : null}
@@ -119,10 +124,11 @@ export default function HouseholdOverviewScreen() {
             label="Household name"
             value={householdName}
             onChangeText={setHouseholdName}
+            editable={isOnline}
             placeholder="My household"
             maxLength={80}
           />
-          <StyledButton label="Create household" onPress={handleCreateHousehold} isLoading={isSubmitting} />
+          <StyledButton label="Create household" onPress={handleCreateHousehold} isLoading={isSubmitting} disabled={!isOnline} />
         </Card>
       )}
       {!household ? (

@@ -17,9 +17,11 @@ export default function Root({ children }: PropsWithChildren) {
             <meta name="theme-color" content="#176B5B" />
             <meta name="apple-mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+            <title>Household Manager</title>
 
             {/* Link the PWA manifest file. */}
             <link rel="manifest" href="/manifest.json" />
+            <link rel="icon" type="image/png" sizes="192x192" href="/household-icon-192.png" />
             <link rel="icon" type="image/svg+xml" href="/household-icon.svg" />
             <link rel="apple-touch-icon" href="/household-icon-192.png" />
 

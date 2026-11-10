@@ -5,20 +5,23 @@ import { Text } from '../primitives/Text';
 interface ShoppingSectionHeaderProps {
   title: string;
   addAccessibilityLabel: string;
+  disabled?: boolean;
   onAdd: () => void;
 }
 
 export function ShoppingSectionHeader({
   title,
   addAccessibilityLabel,
+  disabled = false,
   onAdd,
 }: ShoppingSectionHeaderProps) {
   return (
     <View style={styles.container}>
       <Text size="lg" weight="bold">{title}</Text>
       <Pressable
-        style={styles.addButton}
+        style={[styles.addButton, disabled && styles.disabled]}
         onPress={onAdd}
+        disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={addAccessibilityLabel}
       >
@@ -32,4 +35,5 @@ export function ShoppingSectionHeader({
 const styles = StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   addButton: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, borderRadius: 8, backgroundColor: '#E9EFEB' },
+  disabled: { opacity: 0.6 },
 });

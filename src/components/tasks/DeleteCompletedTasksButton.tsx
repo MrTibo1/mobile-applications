@@ -6,12 +6,14 @@ import { Text } from '../primitives/Text';
 interface DeleteCompletedTasksButtonProps {
   completedTaskCount: number;
   isDeleting: boolean;
+  disabled?: boolean;
   onDelete: () => void;
 }
 
 export function DeleteCompletedTasksButton({
   completedTaskCount,
   isDeleting,
+  disabled = false,
   onDelete,
 }: DeleteCompletedTasksButtonProps) {
   const [isConfirmationVisible, setIsConfirmationVisible] = useState(false);
@@ -26,9 +28,9 @@ export function DeleteCompletedTasksButton({
   return (
     <>
       <Pressable
-        style={[styles.trigger, isDeleting && styles.disabled]}
+        style={[styles.trigger, (isDeleting || disabled) && styles.disabled]}
         onPress={() => setIsConfirmationVisible(true)}
-        disabled={isDeleting}
+        disabled={isDeleting || disabled}
         accessibilityRole="button"
         accessibilityLabel={`Delete ${completedTaskCount} completed tasks`}
       >
@@ -63,7 +65,9 @@ export function DeleteCompletedTasksButton({
               <Pressable
                 style={styles.deleteButton}
                 onPress={confirmDelete}
+                disabled={disabled || isDeleting}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: disabled || isDeleting }}
               >
                 <Text weight="bold" color="#FFFFFF">Delete</Text>
               </Pressable>

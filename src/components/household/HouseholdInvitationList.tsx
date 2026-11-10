@@ -8,12 +8,14 @@ import { Text } from '../primitives/Text';
 interface HouseholdInvitationListProps {
   invites: PendingHouseholdInvite[];
   workingInviteId: string | null;
+  disabled?: boolean;
   onRespond: (invite: PendingHouseholdInvite, accept: boolean) => void;
 }
 
 export function HouseholdInvitationList({
   invites,
   workingInviteId,
+  disabled = false,
   onRespond,
 }: HouseholdInvitationListProps) {
   if (invites.length === 0) return null;
@@ -38,10 +40,10 @@ export function HouseholdInvitationList({
                 <Pressable
                   style={[styles.action, styles.acceptAction]}
                   onPress={() => onRespond(invite, true)}
-                  disabled={workingInviteId !== null}
+                  disabled={disabled || workingInviteId !== null}
                   accessibilityRole="button"
                   accessibilityLabel={`Accept invitation to ${invite.householdName}`}
-                  accessibilityState={{ disabled: workingInviteId !== null, busy: workingInviteId === invite.inviteId }}
+                  accessibilityState={{ disabled: disabled || workingInviteId !== null, busy: workingInviteId === invite.inviteId }}
                 >
                   {workingInviteId === invite.inviteId
                     ? <ActivityIndicator size="small" color="#176B5B" />
@@ -50,10 +52,10 @@ export function HouseholdInvitationList({
                 <Pressable
                   style={styles.action}
                   onPress={() => onRespond(invite, false)}
-                  disabled={workingInviteId !== null}
+                  disabled={disabled || workingInviteId !== null}
                   accessibilityRole="button"
                   accessibilityLabel={`Ignore invitation to ${invite.householdName}`}
-                  accessibilityState={{ disabled: workingInviteId !== null, busy: workingInviteId === invite.inviteId }}
+                  accessibilityState={{ disabled: disabled || workingInviteId !== null, busy: workingInviteId === invite.inviteId }}
                 >
                   {workingInviteId === invite.inviteId
                     ? <ActivityIndicator size="small" color="#52606D" />

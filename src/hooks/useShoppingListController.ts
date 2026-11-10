@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { router, type Href } from 'expo-router';
-import { getHouseholdForUser, type Household } from '../services/householdService';
 import {
   createShoppingListItem,
   getShoppingListDetails,
@@ -9,7 +8,9 @@ import {
   type ShoppingListDetails,
   type ShoppingListItem,
 } from '../services/shoppingService';
+import { getOfflineSnapshot, saveOfflineSnapshot } from '../services/offlineCache';
 import { useHouseholdShell } from '../state/HouseholdShellContext';
+import { reportNetworkFailure, useNetworkStatus } from './useNetworkStatus';
 import type { User } from '../types/User';
 
 function sortItems(items: ShoppingListItem[]): ShoppingListItem[] {
@@ -20,8 +21,8 @@ function sortItems(items: ShoppingListItem[]): ShoppingListItem[] {
 }
 
 export function useShoppingListController(user: User | null, listId: number) {
-  const { setHousehold: setShellHousehold } = useHouseholdShell();
-  const [household, setHousehold] = useState<Household | null>(null);
+  const { household, isLoading: isHouseholdLoading } = useHouseholdShell();
+  const isOnline = useNetworkStatus();
   const [list, setList] = useState<ShoppingListDetails | null>(null);
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [isDraftActive, setIsDraftActive] = useState(false);
@@ -32,33 +33,56 @@ export function useShoppingListController(user: User | null, listId: number) {
   const [error, setError] = useState('');
   const draftItemName = useRef('');
   const itemSaveInProgress = useRef(false);
+  const cacheKey = user ? `shopping-list:${user.id}:${listId}` : '';
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || isHouseholdLoading) return;
     let active = true;
 
     const load = async () => {
+      if (!household) {
+        if (isOnline) {
+          router.replace('/(app)/household' as Href);
+        } else {
+          setError('No saved household is available while offline.');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (!isOnline) {
+        const snapshot = await getOfflineSnapshot<{ list: ShoppingListDetails }>(cacheKey);
+        if (active && snapshot) {
+          setError('');
+          setList(snapshot.list);
+          setItems(snapshot.list.items);
+        } else if (active) {
+          setError('This shopping list has not been saved for offline viewing.');
+        }
+        if (active) setIsLoading(false);
+        return;
+      }
+
+      setError('');
       try {
         if (!Number.isSafeInteger(listId) || listId < 1) {
           throw new Error('Invalid shopping list.');
         }
-        const currentHousehold = await getHouseholdForUser(user.id);
-        if (!active) return;
-        if (!currentHousehold) {
-          setShellHousehold(null);
-          router.replace('/(app)/household' as Href);
-          return;
-        }
-        setShellHousehold(currentHousehold);
-        const shoppingList = await getShoppingListDetails(currentHousehold.id, listId);
+        const shoppingList = await getShoppingListDetails(household.id, listId);
         if (active) {
-          setHousehold(currentHousehold);
-          setShellHousehold(currentHousehold);
           setList(shoppingList);
           setItems(shoppingList.items);
         }
       } catch (loadError) {
-        if (active) setError(loadError instanceof Error ? loadError.message : 'Unable to load shopping list.');
+        reportNetworkFailure(loadError);
+        const snapshot = await getOfflineSnapshot<{ list: ShoppingListDetails }>(cacheKey);
+        if (active && snapshot) {
+          setList(snapshot.list);
+          setItems(snapshot.list.items);
+          setError('Unable to refresh this list. Showing the saved copy.');
+        } else if (active) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load shopping list.');
+        }
       } finally {
         if (active) setIsLoading(false);
       }
@@ -66,7 +90,13 @@ export function useShoppingListController(user: User | null, listId: number) {
 
     void load();
     return () => { active = false; };
-  }, [listId, setShellHousehold, user]);
+  }, [cacheKey, household, isHouseholdLoading, isOnline, listId, user]);
+
+  useEffect(() => {
+    if (!isLoading && household && list && user) {
+      void saveOfflineSnapshot(cacheKey, { list: { ...list, items } });
+    }
+  }, [cacheKey, household, isLoading, items, list, user]);
 
   const refreshList = async (householdId: number, shoppingListId: number) => {
     const shoppingList = await getShoppingListDetails(householdId, shoppingListId);
@@ -75,6 +105,10 @@ export function useShoppingListController(user: User | null, listId: number) {
   };
 
   const persistItem = async (name: string): Promise<boolean> => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return false;
+    }
     if (!list || !user || !name.trim() || itemSaveInProgress.current) return false;
     itemSaveInProgress.current = true;
     setError('');
@@ -84,6 +118,7 @@ export function useShoppingListController(user: User | null, listId: number) {
       try {
         await refreshList(list.householdId, list.id);
       } catch (loadError) {
+        reportNetworkFailure(loadError);
         setError(
           loadError instanceof Error
             ? `The item was added, but the list could not be refreshed: ${loadError.message}`
@@ -92,6 +127,7 @@ export function useShoppingListController(user: User | null, listId: number) {
       }
       return true;
     } catch (createError) {
+      reportNetworkFailure(createError);
       setError(createError instanceof Error ? createError.message : 'Unable to add item.');
       return false;
     } finally {
@@ -139,6 +175,10 @@ export function useShoppingListController(user: User | null, listId: number) {
   };
 
   const handleEditItem = async (item: ShoppingListItem, name: string): Promise<boolean> => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return false;
+    }
     if (!list || !user || !name.trim()) return false;
     setError('');
     try {
@@ -153,6 +193,7 @@ export function useShoppingListController(user: User | null, listId: number) {
       try {
         await refreshList(list.householdId, list.id);
       } catch (loadError) {
+        reportNetworkFailure(loadError);
         setError(
           loadError instanceof Error
             ? `The item was updated, but the list could not be refreshed: ${loadError.message}`
@@ -161,12 +202,17 @@ export function useShoppingListController(user: User | null, listId: number) {
       }
       return true;
     } catch (updateError) {
+      reportNetworkFailure(updateError);
       setError(updateError instanceof Error ? updateError.message : 'Unable to update shopping item.');
       return false;
     }
   };
 
   const handleToggleItem = async (item: ShoppingListItem) => {
+    if (!isOnline) {
+      setError('You are offline. Reconnect to save changes.');
+      return;
+    }
     if (!list || !user || pendingItemIds.has(item.id)) return;
 
     const isCompleted = !item.isCompleted;
@@ -184,6 +230,7 @@ export function useShoppingListController(user: User | null, listId: number) {
     try {
       await setShoppingListItemCompleted(list.id, item.id, user.id, isCompleted);
     } catch (updateError) {
+      reportNetworkFailure(updateError);
       setItems((current) => sortItems(current.map((currentItem) => currentItem.id === item.id ? item : currentItem)));
       setList(currentList);
       setError(updateError instanceof Error ? updateError.message : 'Unable to update shopping item.');
@@ -198,6 +245,7 @@ export function useShoppingListController(user: User | null, listId: number) {
     try {
       await refreshList(list.householdId, list.id);
     } catch (loadError) {
+      reportNetworkFailure(loadError);
       setError(
         loadError instanceof Error
           ? `The item was updated, but the list could not be refreshed: ${loadError.message}`
